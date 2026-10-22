@@ -7,7 +7,7 @@
  */
 
 /** Copy behavior on text selection. */
-export type CopyMode = 'toolbar' | 'auto'
+export type CopyMode = 'toolbar' | 'auto' | 'off'
 
 /** The user-facing settings of this plugin. */
 export interface PluginPrefs {
@@ -15,7 +15,7 @@ export interface PluginPrefs {
    * How a selection copies: 'toolbar' shows an explicit copy button above the
    * selection (the safe default — nothing writes the system clipboard until
    * the user clicks); 'auto' copies the selection directly (terminal-style,
-   * floods clipboard history).
+   * floods clipboard history); 'off' leaves selections to the host and other plugins.
    */
   copyMode: CopyMode
   /** Right-click on the composer textarea pastes the clipboard directly. */
@@ -95,13 +95,11 @@ function migrate(parsed: unknown): PluginPrefs {
   // is the old default rather than a choice the user made.
   const sideChatDefault = storedVersion >= 3 ? DEFAULTS.sideChat : true
   const rawMode = source.copyMode
-  const copyMode: CopyMode = rawMode === 'auto'
-    ? 'auto'
-    : rawMode === 'toolbar'
-      ? 'toolbar'
-      : typeof source.copyOnSelect === 'boolean'
-        ? (source.copyOnSelect ? 'auto' : 'toolbar')
-        : DEFAULTS.copyMode
+  const copyMode: CopyMode = rawMode === 'auto' || rawMode === 'toolbar' || rawMode === 'off'
+    ? rawMode
+    : typeof source.copyOnSelect === 'boolean'
+      ? (source.copyOnSelect ? 'auto' : 'toolbar')
+      : DEFAULTS.copyMode
   return {
     copyMode,
     rightClickPaste: bool(source.rightClickPaste, DEFAULTS.rightClickPaste),

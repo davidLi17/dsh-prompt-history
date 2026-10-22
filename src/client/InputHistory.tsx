@@ -823,16 +823,19 @@ export function InputHistory(props: InputHistoryProps) {
     return () => { document.removeEventListener('contextmenu', onContextMenu, true) }
   }, [])
 
-  // Selection-driven copy, two modes (Settings → 终端式输入): 'auto' copies
+  // Selection-driven copy, three modes (Settings → 终端式输入): 'auto' copies
   // any stable non-empty selection directly (terminal-style, floods the system
   // clipboard — opt-in); 'toolbar' (default) shows an explicit 复制 button
   // above the selection and copies only when clicked (nothing writes the
-  // clipboard on its own). Both modes apply
+  // clipboard on its own); 'off' leaves selections alone, without listeners.
+  // The two enabled modes apply
   // anywhere in the page — the composer editor (chip-aware via the composer's
   // own copy handler), chat messages, code blocks. A stable-window
   // debounce keeps mid-drag partial selections out; the toolbar is dismissed
   // by collapsing the selection, Escape, scrolling, or clicking elsewhere.
   useEffect(() => {
+    if (prefs.copyMode === 'off') return
+
     let timer: number | undefined
     let lastKey = ''
     let dragStartedInEditor = false
@@ -956,6 +959,7 @@ export function InputHistory(props: InputHistoryProps) {
         return
       }
       const mode = getPrefs().copyMode
+      if (mode === 'off') return
       const host = editorHost()
       const editorActive = host !== null
         && (document.activeElement === host || dragStartedInEditor)
@@ -969,6 +973,8 @@ export function InputHistory(props: InputHistoryProps) {
       }
       window.clearTimeout(timer)
       timer = window.setTimeout(() => {
+        // A setting can change before React runs this effect's cleanup.
+        if (getPrefs().copyMode !== mode) return
         if (mode === 'auto') {
           copySelection()
         } else {
@@ -1019,7 +1025,7 @@ export function InputHistory(props: InputHistoryProps) {
       window.clearTimeout(timer)
       hideSelectionToolbar()
     }
-  }, [])
+  }, [prefs.copyMode])
 
   return prefs.tocVisible
     ? <ChatToc texts={tocTexts} onWiden={requestWiden} />

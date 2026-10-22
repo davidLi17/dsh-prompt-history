@@ -68,12 +68,14 @@ Open **Settings → `>_ Terminal Input`** (stored in browser localStorage, effec
 
 | Option | Default | Meaning |
 |---|---|---|
-| Copy mode (on selection) | `Toolbar copy` | `Toolbar` (recommended; writes the clipboard only on click) / `Auto copy on select` (terminal-style) |
+| Copy mode (on selection) | `Toolbar copy` | `Toolbar` (recommended; writes the clipboard only on click) / `Auto copy on select` (terminal-style) / `Disable selection copy` |
 | Cross-session history | Off | Up/Down history persists across sessions in browser localStorage (cap 200) |
 | Context suggestion (Tab accepts) | On | With an empty composer, predicts your next prompt using the current session model; Tab accepts (once per turn, small quota use) |
 | Prompt completion (Tab accepts) | On | Ghosts the matching history prompt while you type; Tab or → accepts, Escape ignores |
 | Chat TOC | On | Show the draggable grip on the chat left edge; can be turned off |
 | Right-click paste | On | Off restores the browser's native context menu |
+
+Disable selection copy leaves selections to the host or other annotation plugins: no selection toolbar and no automatic clipboard writes. Right-click paste remains independently configurable.
 
 Up/Down history is always on, independent of these switches. Completion shares the same history and the same prefix-matching semantics as Up.
 

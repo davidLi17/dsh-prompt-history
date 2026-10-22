@@ -16,6 +16,7 @@ import { openSideChat } from './sideChat.tsx'
 const COPY_MODES: ReadonlyArray<{ value: CopyMode; label: PromptHistoryKey }> = [
   { value: 'toolbar', label: 'copyMode.toolbar' },
   { value: 'auto', label: 'copyMode.auto' },
+  { value: 'off', label: 'copyMode.off' },
 ]
 
 /** Section entry: grouped preferences plus the prediction-bridge status. */
