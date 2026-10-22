@@ -68,8 +68,8 @@ dsh plugin --profile web add dsh-prompt-history
 ## 安装与卸载
 
 - **npm 渠道**（已发布版本）：`dsh plugin --profile web add dsh-prompt-history`
-- **源码渠道**（本地开发，最新 `main`）：`dsh plugin --profile web add "github:Xiaofei-fei/dsh-prompt-history#main"`（源码检出需先 `pnpm run build` —— 未构建的 bundle 会拒绝启动）
-- **此 fork 的 GitHub 安装**：提交中包含已构建的 `lib/index.js`、`lib/client.js` 及类型声明，可直接加载；修改源码后仍需重新构建并同步产物。
+- **源码渠道**（本地开发，最新 `main`）：`dsh plugin --profile web add "github:Xiaofei-fei/dsh-prompt-history#main"`（开发者修改源码后需先 `pnpm run build`；此 fork 已包含编译产物）
+- **此 fork 的 GitHub 安装**：提交中包含已构建的 `lib/index.js`、`lib/client.js` 及类型声明，可直接加载；安装时不运行构建脚本，无需放宽 pnpm 的 `allowBuilds` 安全策略；修改源码后仍需重新构建并同步产物。
 - **卸载**：`dsh plugin --profile web remove dsh-prompt-history`
 
 ## 配置
