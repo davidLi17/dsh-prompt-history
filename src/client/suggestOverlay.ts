@@ -9,6 +9,7 @@
  * @module dsh-prompt-history/client/suggestOverlay
  */
 import { COMPOSER_CARD, editorHost, editorText } from './editor.ts'
+import { sitBelowCover } from './occlusion.ts'
 
 const CLASS = 'dsh-ph-suggest'
 /** Toggled on the composer card while a prediction is on screen. */
@@ -65,7 +66,6 @@ function tick(): void {
     hideSuggestion()
     return
   }
-  if (current.hidePlaceholder) hidePlaceholders()
   paint()
 }
 
@@ -169,10 +169,27 @@ function paint(): boolean {
   const painted = current
   const el = node
   if (painted === null || el === null) return false
+  // The composer gained real text after this prediction was drawn (typing, a
+  // paste, an accepted completion, an IME commit). The repaint must not put the
+  // ghost back on top of the user's own input — this runs on the tick, so a
+  // missed React effect can no longer leave the two layered together.
+  if (editorText(painted.host).trim() !== '') {
+    hideSuggestion()
+    return false
+  }
   const box = editorBox(painted.host)
   if (box === null) return false
   const card = document.querySelector<HTMLElement>(COMPOSER_CARD)
+  // A popup covering the composer outranks the overlay's own layer; drop just
+  // below it so the panel covers the ghost instead of the ghost bleeding around
+  // the panel. Restored to the stylesheet default as soon as it closes.
+  sitBelowCover(el, box, painted.host)
   const style = window.getComputedStyle(card ?? painted.host)
+  // A cover with no layer of its own hides the hint (see occlusion.ts). The
+  // composer's placeholder then has to come back — an empty field with neither
+  // the hint nor the placeholder reads as a broken composer.
+  if (el.style.visibility === 'hidden') restorePlaceholders()
+  else if (painted.hidePlaceholder) hidePlaceholders()
   el.classList.toggle(`${CLASS}--pending`, painted.pending === true)
   const textEl = document.createElement('span')
   textEl.className = 'dsh-ph-suggest-text'
