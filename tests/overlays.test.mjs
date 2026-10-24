@@ -6,7 +6,7 @@ import ts from 'typescript'
 
 // Execute the real overlay/editor/occlusion modules against controlled layout,
 // hit testing, and timers. No host session or prediction request is required.
-function harness() {
+function harness({ textarea = false } = {}) {
   const nodes = []
   const timers = new Map()
   const events = new Map()
@@ -33,7 +33,15 @@ function harness() {
     remove() { this.isConnected = false }
   }
   class Textarea extends Element {}
-  const host = new Element()
+  const host = textarea ? new Textarea() : new Element()
+  host.value = ''
+  host.selectionStart = 0
+  let measurable = true
+  const caret = () => measurable
+    ? { left: 20, right: 22, top: 12, width: 2, height: 20 }
+    : { left: 0, right: 0, top: 0, width: 0, height: 0 }
+  const range = { getBoundingClientRect: caret, getClientRects: () => [],
+    cloneRange: () => range, setStart() {}, setEnd() {}, startOffset: 0, startContainer: host }
   const card = new Element()
   const placeholder = new Element()
   const document = {
@@ -43,9 +51,7 @@ function harness() {
       : s.startsWith('style') ? nodes.find(n => n.dataset.pluginCss) ?? null : cover,
     querySelectorAll: () => [placeholder],
     elementFromPoint: (x) => cover && x > 100 ? cover : host,
-    getSelection: () => ({ rangeCount: 1, anchorNode: host, getRangeAt: () => ({
-      getBoundingClientRect: () => ({ left: 20, right: 22, top: 12, width: 2, height: 20 }),
-    }) }),
+    getSelection: () => ({ rangeCount: 1, anchorNode: host, getRangeAt: () => range }),
   }
   const window = {
     setInterval: (fn) => { timers.set(++id, fn); return id },
@@ -64,6 +70,12 @@ function harness() {
   }
   return {
     host, card, placeholder, load,
+    measurable: (on) => {
+      measurable = on
+      host.rect = on
+        ? { left: 10, top: 10, width: 300, height: 50, right: 310, bottom: 60 }
+        : { left: 0, top: 0, width: 0, height: 0, right: 0, bottom: 0 }
+    },
     overlay: (cls) => nodes.findLast(n => n.className === cls && n.isConnected),
     tick: () => [...timers.values()].forEach(fn => fn()),
     resize: () => events.get('resize')?.forEach(fn => fn()),
@@ -129,3 +141,42 @@ test('both completion and prediction sit below numeric popup layers and reset af
     assert.equal(overlay.isConnected, false)
   }
 })
+
+// ask_user_question can hide the composer seat without detaching its editor.
+// Exercise the actual measurement fallbacks, not a mocked caretRect/editorBox.
+for (const kind of ['completion', 'prediction', 'pending']) {
+  for (const textarea of [false, true]) {
+    test(`${kind} drops a connected but unmeasurable ${textarea ? 'textarea' : 'contenteditable'} and can reopen`, () => {
+      const h = harness({ textarea })
+      const completion = kind === 'completion'
+      const api = h.load(completion ? './ghost.ts' : './suggestOverlay.ts')
+      if (!completion) api.installSuggestStyle()
+      const show = () => completion ? api.showGhost('suffix', h.host)
+        : kind === 'pending' ? api.showPending('loading', h.host)
+        : api.showSuggestion('next', 'Tab', h.host)
+      const visible = () => completion ? api.ghostVisible() : api.suggestionVisible()
+      const cls = completion ? 'dsh-ph-ghost' : 'dsh-ph-suggest'
+      h.measurable(false)
+      assert.equal(show(), false, 'initial unmeasurable host must not show')
+      h.measurable(true)
+      for (let i = 0; i < 2; i++) {
+        assert.equal(show(), true)
+        const overlay = h.overlay(cls)
+        h.measurable(false)
+        assert.equal(h.host.isConnected, true, 'the seat hides without detaching the editor')
+        h.tick()
+        assert.equal(visible(), false, 'stale fixed overlay must be removed')
+        assert.equal(overlay.isConnected, false)
+        assert.equal(h.timerCount(), 0)
+        assert.equal(h.placeholder.style.visibility, '')
+        assert.equal(h.card.classes.has('dsh-ph-suggesting'), false)
+        h.measurable(true)
+        h.tick(); h.resize()
+        assert.equal(visible(), false, 'viewport events must not resurrect stale text')
+      }
+      assert.equal(show(), true, 'a fresh suggestion can show after the seat returns')
+      completion ? api.hideGhost() : api.hideSuggestion()
+      assert.equal(h.timerCount(), 0)
+    })
+  }
+}
